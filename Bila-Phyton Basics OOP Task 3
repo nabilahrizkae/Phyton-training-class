@@ -1,0 +1,69 @@
+"""
+Created on Sat Sep 28 07:55:13 2024
+
+@author: ADMIN
+"""
+
+import yfinance as yf
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+start_date = "2021-01-01"
+end_date = "2024-09-01"
+
+data = yf.download("MNSO", start=start_date, end=end_date)
+
+date_array = data.index.to_numpy()
+data_array = data.to_numpy()
+
+date = data.index
+
+N_data = len(data_array)
+
+
+"""
+Linear regression with sklearn
+conda install scikit-learn
+"""
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler #Scaling to make the linear regression can be observed
+
+data['dates_numeric'] = data.index.map(pd.Timestamp.timestamp)
+scaler = StandardScaler() 
+x_scaled = scaler.fit_transform(data['dates_numeric'].values.reshape(-1,1))
+
+
+# Features (X) and target (y)
+x = x_scaled # Scaled dates
+y = data['Adj Close']
+
+# Fit the linear regression model
+model = LinearRegression()
+model.fit(x, y)
+
+# Predict values
+y_pred = model.predict(x)
+
+#plot
+plt.figure(figsize=(15,6))
+plt.plot(data.index, data["Adj Close"], label="Adj Close")
+plt.plot(data.index, y_pred, label= "Interpolation", color='red')
+plt.grid(linestyle=":")
+plt.ylabel("Price ($)")
+plt.title(f"Miniso Price from {start_date} to {end_date}")
+plt.legend()
+
+# Extrapolation: Predict future values -> Predict the next one year (2025-09-01)
+future_dates = pd.date_range(start=data.index[-1], periods=365, freq='D')  # 1 year into the future
+future_dates_numeric = future_dates.map(pd.Timestamp.timestamp).values.reshape(-1, 1)
+
+# Scale the future dates
+future_dates_scaled = scaler.transform(future_dates_numeric)
+
+# Predict future values
+future_pred = model.predict(future_dates_scaled)
+
+# Plot the extrapolation
+plt.plot(future_dates, future_pred, label="Extrapolation", color='grey', linestyle='--')  # Extrapolation line
+plt.legend()
